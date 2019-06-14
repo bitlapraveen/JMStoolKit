@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Denis Forveille titou10.titou10@gmail.com
+ * Copyright (C) 2019 Denis Forveille titou10.titou10@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ package org.titou10.jtb.qm.solace;
 
 import java.net.HttpURLConnection;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
@@ -42,9 +43,10 @@ import org.titou10.jtb.jms.qm.QManager;
 import org.titou10.jtb.jms.qm.QManagerProperty;
 import org.titou10.jtb.jms.qm.QueueData;
 import org.titou10.jtb.jms.qm.TopicData;
+import org.titou10.jtb.qm.solace.semp.SempJndiTopicData;
 import org.titou10.jtb.qm.solace.semp.SempQueueData;
 import org.titou10.jtb.qm.solace.semp.SempResponse;
-import org.titou10.jtb.qm.solace.semp.SempTopicData;
+import org.titou10.jtb.qm.solace.semp.SempTopicEndpointData;
 import org.titou10.jtb.qm.solace.utils.PType;
 
 import com.solacesystems.jms.SolConnectionFactory;
@@ -59,35 +61,37 @@ import com.solacesystems.jms.SolJmsUtility;
  */
 public class SolaceQManager extends QManager {
 
-   private static final org.slf4j.Logger   log                    = LoggerFactory.getLogger(SolaceQManager.class);
+   private static final org.slf4j.Logger   log                         = LoggerFactory.getLogger(SolaceQManager.class);
 
-   private static final String             CR                     = "\n";
+   private static final String             CR                          = "\n";
    private static final String             HELP_TEXT;
 
    // HTTP REST stuff
-   private static final HttpClient         HTTP_CLIENT            = HttpClient.newBuilder()
+   private static final HttpClient         HTTP_CLIENT                 = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL).build();
 
    // JSON-B stuff
-   private static final Jsonb              JSONB                  = JsonbBuilder.create();
-   private static final PType              JSONB_LIST_Q_DATA      = new PType(List.class, SempQueueData.class);
-   private static final PType              JSONB_RESP_Q_DATA      = new PType(SempResponse.class, SempQueueData.class);
-   private static final PType              JSONB_RESP_LIST_Q_DATA = new PType(SempResponse.class, JSONB_LIST_Q_DATA);
-   private static final PType              JSONB_LIST_T_DATA      = new PType(List.class, SempTopicData.class);
-   private static final PType              JSONB_RESP_T_DATA      = new PType(SempResponse.class, SempTopicData.class);
-   private static final PType              JSONB_RESP_LIST_T_DATA = new PType(SempResponse.class, JSONB_LIST_T_DATA);
+   private static final Jsonb              JSONB                       = JsonbBuilder.create();
+   private static final PType              JSONB_Q_DATA_RESP           = new PType(SempResponse.class, SempQueueData.class);
+   private static final PType              JSONB_Q_DATA_LIST           = new PType(List.class, SempQueueData.class);
+   private static final PType              JSONB_Q_DATA_LIST_RESP      = new PType(SempResponse.class, JSONB_Q_DATA_LIST);
+
+   private static final PType              JSONB_TEP_DATA_RESP         = new PType(SempResponse.class, SempTopicEndpointData.class);
+
+   private static final PType              JSONB_JNDI_T_DATA_LIST      = new PType(List.class, SempJndiTopicData.class);
+   private static final PType              JSONB_JNDI_T_DATA_LIST_RESP = new PType(SempResponse.class, JSONB_JNDI_T_DATA_LIST);
 
    // Properties
-   private List<QManagerProperty>          parameters             = new ArrayList<QManagerProperty>();
+   private List<QManagerProperty>          parameters                  = new ArrayList<QManagerProperty>();
 
-   private static final String             MESSAGE_VPN            = "VPN";
-   private static final String             MGMT_URL               = "mgmt_url";
-   private static final String             MGMT_USERNAME          = "mgmt_username";
-   private static final String             MGMT_PASSWORD          = "mgmt_password";
-   private static final String             BROWSER_TIMEOUT        = "browser_timeout";
+   private static final String             MESSAGE_VPN                 = "VPN";
+   private static final String             MGMT_URL                    = "mgmt_url";
+   private static final String             MGMT_USERNAME               = "mgmt_username";
+   private static final String             MGMT_PASSWORD               = "mgmt_password";
+   private static final String             BROWSER_TIMEOUT             = "browser_timeout";
 
    // Operations
-   private final Map<Integer, SEMPContext> sempContexts           = new HashMap<>();
+   private final Map<Integer, SEMPContext> sempContexts                = new HashMap<>();
 
    public SolaceQManager() {
       log.debug("Instantiate Solace");
@@ -167,7 +171,7 @@ public class SolaceQManager extends QManager {
 
    @Override
    public DestinationData discoverDestinations(Connection jmsConnection, boolean showSystemObjects) throws Exception {
-      log.debug("discoverDestinations : {} - {}", jmsConnection, showSystemObjects);
+      log.debug("discoverDestinations. showSystemObjects? {}", showSystemObjects);
 
       Integer hash = jmsConnection.hashCode();
       SEMPContext sempContext = sempContexts.get(hash);
@@ -175,39 +179,44 @@ public class SolaceQManager extends QManager {
       // Build Queues list
       SortedSet<QueueData> listQueueData = new TreeSet<>();
 
-      HttpResponse<String> response = HTTP_CLIENT.send(sempContext.getSempListQueuesRequest(), BodyHandlers.ofString());
-
+      HttpRequest request = sempContext.getSempListQueuesRequest();
+      log.debug("SEMP request: {}", request);
+      HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
       String body = response.body();
-      log.warn("statusCode={}", response.statusCode());
+      log.debug("statusCode={}", response.statusCode());
+      log.trace("body={}", response.body());
       if (response.statusCode() != HttpURLConnection.HTTP_OK) {
          String msg = "Bad return code received from Solace SEMP when retrieving Queue List: " + response.statusCode();
          log.error(msg);
          throw new Exception(msg);
       }
 
-      SempResponse<List<SempQueueData>> queues = JSONB.fromJson(body, JSONB_RESP_LIST_Q_DATA);
+      SempResponse<List<SempQueueData>> queues = JSONB.fromJson(body, JSONB_Q_DATA_LIST_RESP);
       for (SempQueueData q : queues.data) {
-         log.warn("q={}", q.queueName);
+         log.debug("q={}", q.queueName);
          listQueueData.add(new QueueData(q.queueName));
       }
 
       // Build Topics lists
       SortedSet<TopicData> listTopicData = new TreeSet<>();
 
-      response = HTTP_CLIENT.send(sempContext.getSempListTopicsRequest(), BodyHandlers.ofString());
-
+      request = sempContext.getSempListJndiTopicsRequest();
+      log.debug("SEMP request: {}", request);
+      response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
       body = response.body();
-      log.warn("statusCode={}", response.statusCode());
+      log.debug("statusCode={}", response.statusCode());
+      log.trace("body={}", response.body());
       if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-         String msg = "Bad return code received from Solace SEMP when retrieving Topic List: " + response.statusCode();
+         String msg = "Bad return code received from Solace SEMP when retrieving JNDITopic List: " + response.statusCode();
          log.error(msg);
          throw new Exception(msg);
       }
 
-      SempResponse<List<SempTopicData>> topics = JSONB.fromJson(body, JSONB_RESP_LIST_T_DATA);
-      for (SempTopicData t : topics.data) {
-         log.warn("q={}", t.topicEndpointName);
-         listTopicData.add(new TopicData(t.topicEndpointName));
+      SempResponse<List<SempJndiTopicData>> topics = JSONB.fromJson(body, JSONB_JNDI_T_DATA_LIST_RESP);
+      for (SempJndiTopicData sempJndiTopicData : topics.data) {
+         log.debug("t={}", sempJndiTopicData.topicName);
+         sempContext.putJndiTopicData(sempJndiTopicData);
+         listTopicData.add(new TopicData(sempJndiTopicData.topicName));
       }
 
       return new DestinationData(listQueueData, listTopicData);
@@ -222,9 +231,12 @@ public class SolaceQManager extends QManager {
       SortedMap<String, Object> properties = new TreeMap<>();
 
       try {
-         HttpResponse<String> response = HTTP_CLIENT.send(sempContext.buildQueueInfoRequest(queueName), BodyHandlers.ofString());
+         HttpRequest request = sempContext.buildQueueInfoRequest(queueName);
+         log.debug("SEMP request: {}", request);
+         HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
          String body = response.body();
-         log.warn("statusCode={}", response.statusCode());
+         log.debug("statusCode={}", response.statusCode());
+         log.trace("body={}", response.body());
          if (response.statusCode() != HttpURLConnection.HTTP_OK) {
             log.error("Bad return code received from Solace SEMP when retrieving Queue information for '{}' : {}",
                       queueName,
@@ -232,7 +244,7 @@ public class SolaceQManager extends QManager {
             return properties;
          }
 
-         SempResponse<SempQueueData> qResp = JSONB.fromJson(body, JSONB_RESP_Q_DATA);
+         SempResponse<SempQueueData> qResp = JSONB.fromJson(body, JSONB_Q_DATA_RESP);
          SempQueueData qData = qResp.data;
 
          properties.put("accessType", qData.accessType);
@@ -267,9 +279,17 @@ public class SolaceQManager extends QManager {
 
       TreeMap<String, Object> properties = new TreeMap<>();
       try {
-         HttpResponse<String> response = HTTP_CLIENT.send(sempContext.buildTopicInfoRequest(topicName), BodyHandlers.ofString());
+
+         properties.put("physicalName", sempContext.getJndiTopicData(topicName).physicalName);
+
+         // TODO: DF maybe could be optimized to not call again if the endPoint does not exists?
+
+         HttpRequest request = sempContext.buildTopicInfoRequest(topicName);
+         log.debug("SEMP request: {}", request);
+         HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
          String body = response.body();
-         log.warn("statusCode={}", response.statusCode());
+         log.debug("statusCode={}", response.statusCode());
+         log.trace("body={}", response.body());
          if (response.statusCode() != HttpURLConnection.HTTP_OK) {
             log.error("Bad return code received from Solace SEMP when retrieving Topic information for '{}' : {}",
                       topicName,
@@ -277,25 +297,25 @@ public class SolaceQManager extends QManager {
             return properties;
          }
 
-         SempResponse<SempTopicData> qResp = JSONB.fromJson(body, JSONB_RESP_T_DATA);
-         SempTopicData tData = qResp.data;
+         SempResponse<SempTopicEndpointData> qResp = JSONB.fromJson(body, JSONB_TEP_DATA_RESP);
+         SempTopicEndpointData tepData = qResp.data;
 
-         properties.put("accessType", tData.accessType);
-         properties.put("consumerAckPropagationEnabled", tData.consumerAckPropagationEnabled);
-         properties.put("deadMsgQueue", tData.deadMsgQueue);
-         properties.put("egressEnabled", tData.egressEnabled);
-         properties.put("ingressEnabled", tData.ingressEnabled);
-         properties.put("maxBindCount", tData.maxBindCount);
-         properties.put("maxDeliveredUnackedMsgsPerFlow", tData.maxDeliveredUnackedMsgsPerFlow);
-         properties.put("maxMsgSize", tData.maxMsgSize);
-         properties.put("maxRedeliveryCount", tData.maxRedeliveryCount);
-         properties.put("maxSpoolUsage", tData.maxSpoolUsage);
-         properties.put("maxTtl", tData.maxTtl);
-         properties.put("permission", tData.permission);
-         properties.put("rejectLowPriorityMsgEnabled", tData.rejectLowPriorityMsgEnabled);
-         properties.put("rejectLowPriorityMsgLimit", tData.rejectLowPriorityMsgLimit);
-         properties.put("respectMsgPriorityEnabled", tData.respectMsgPriorityEnabled);
-         properties.put("respectTtlEnabled", tData.respectTtlEnabled);
+         properties.put("accessType", tepData.accessType);
+         properties.put("consumerAckPropagationEnabled", tepData.consumerAckPropagationEnabled);
+         properties.put("deadMsgQueue", tepData.deadMsgQueue);
+         properties.put("egressEnabled", tepData.egressEnabled);
+         properties.put("ingressEnabled", tepData.ingressEnabled);
+         properties.put("maxBindCount", tepData.maxBindCount);
+         properties.put("maxDeliveredUnackedMsgsPerFlow", tepData.maxDeliveredUnackedMsgsPerFlow);
+         properties.put("maxMsgSize", tepData.maxMsgSize);
+         properties.put("maxRedeliveryCount", tepData.maxRedeliveryCount);
+         properties.put("maxSpoolUsage", tepData.maxSpoolUsage);
+         properties.put("maxTtl", tepData.maxTtl);
+         properties.put("permission", tepData.permission);
+         properties.put("rejectLowPriorityMsgEnabled", tepData.rejectLowPriorityMsgEnabled);
+         properties.put("rejectLowPriorityMsgLimit", tepData.rejectLowPriorityMsgLimit);
+         properties.put("respectMsgPriorityEnabled", tepData.respectMsgPriorityEnabled);
+         properties.put("respectTtlEnabled", tepData.respectTtlEnabled);
 
       } catch (Exception e) {
          log.error("Exception occurred in getTopicInformation()", e);

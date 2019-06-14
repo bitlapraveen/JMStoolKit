@@ -18,12 +18,12 @@ package org.titou10.jtb.qm.solace.semp;
 
 /**
  * 
- * Representation of a "Queue" from SEMP
+ * Representation of a "topicEndpoints" from SEMP
  * 
  * @author Denis Forveille
  *
  */
-public class SempQueueData {
+public class SempTopicEndpointData {
 
    public String  accessType;
    public Boolean consumerAckPropagationEnabled;
@@ -33,21 +33,20 @@ public class SempQueueData {
    public Long    maxBindCount;
    public Long    maxDeliveredUnackedMsgsPerFlow;
    public Integer maxMsgSize;
-   public Long    maxMsgSpoolUsage;
    public Long    maxRedeliveryCount;
+   public Long    maxSpoolUsage;
    public Long    maxTtl;
    public String  permission;
-   public String  queueName;
    public Boolean rejectLowPriorityMsgEnabled;
    public Long    rejectLowPriorityMsgLimit;
-   public String  rejectMsgToSenderOnDiscardBehavior;
    public Boolean respectMsgPriorityEnabled;
    public Boolean respectTtlEnabled;
+   public String  topicEndpointName;
 
    // -------------------------
    // Constructor
    // -------------------------
-   public SempQueueData() {
+   public SempTopicEndpointData() {
       // JSON-B
    }
 }

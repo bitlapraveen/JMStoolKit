@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Denis Forveille titou10.titou10@gmail.com
+ * Copyright (C) 2019 Denis Forveille titou10.titou10@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,35 +18,20 @@ package org.titou10.jtb.qm.solace.semp;
 
 /**
  * 
- * Representation of a Topic from SEMP
+ * Representation of a "jndiTopic" from SEMP
  * 
  * @author Denis Forveille
  *
  */
-public class SempTopicData {
+public class SempJndiTopicData {
 
-   public String  accessType;
-   public Boolean consumerAckPropagationEnabled;
-   public String  deadMsgQueue;
-   public Boolean egressEnabled;
-   public Boolean ingressEnabled;
-   public Long    maxBindCount;
-   public Long    maxDeliveredUnackedMsgsPerFlow;
-   public Integer maxMsgSize;
-   public Long    maxRedeliveryCount;
-   public Long    maxSpoolUsage;
-   public Long    maxTtl;
-   public String  permission;
-   public Boolean rejectLowPriorityMsgEnabled;
-   public Long    rejectLowPriorityMsgLimit;
-   public Boolean respectMsgPriorityEnabled;
-   public Boolean respectTtlEnabled;
-   public String  topicEndpointName;
+   public String physicalName;
+   public String topicName;
 
    // -------------------------
    // Constructor
    // -------------------------
-   public SempTopicData() {
+   public SempJndiTopicData() {
       // JSON-B
    }
 }

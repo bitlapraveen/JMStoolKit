@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Denis Forveille titou10.titou10@gmail.com
+ * Copyright (C) 2019 Denis Forveille titou10.titou10@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,10 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.titou10.jtb.qm.solace.semp.SempJndiTopicData;
 
 /**
  * 
@@ -30,23 +34,26 @@ import java.util.Base64;
  */
 public final class SEMPContext {
 
-   private static final Duration HTTP_TIMEOUT     = Duration.ofSeconds(30L);
+   private static final Duration          HTTP_TIMEOUT          = Duration.ofSeconds(30L);
 
-   private static final String   SEMP_CONFIG_URI  = "/SEMP/v2/config/msgVpns/%s";
+   private static final String            SEMP_CONFIG_URI       = "/SEMP/v2/config/msgVpns/%s";
 
-   private static final String   SEMP_QUEUES_LIST = "%s" + SEMP_CONFIG_URI + "/queues?select=queueName&count=1000";
-   private static final String   SEMP_TOPICS_LIST = "%s" + SEMP_CONFIG_URI + "/topicEndpoints?select=topicEndpointName&count=1000";
+   private static final String            SEMP_QUEUES_LIST      = "%s" + SEMP_CONFIG_URI + "/queues?select=queueName&count=1000";
+   private static final String            SEMP_JNDI_TOPICS_LIST = "%s" + SEMP_CONFIG_URI + "/jndiTopics?count=1000";
 
-   private static final String   SEMP_QUEUE_INFO  = "%s" + SEMP_CONFIG_URI + "/queues/%s";
-   private static final String   SEMP_TOPIC_INFO  = "%s" + SEMP_CONFIG_URI + "/topicEndpoints/%s";
+   private static final String            SEMP_QUEUE_INFO       = "%s" + SEMP_CONFIG_URI + "/queues/%s";
+   private static final String            SEMP_TOPIC_INFO       = "%s" + SEMP_CONFIG_URI + "/topicEndpoints/%s";
 
-   private String                vpn;
-   private String                mgmtUrl;
+   private String                         vpn;
+   private String                         mgmtUrl;
 
-   private HttpRequest           sempListQueuesRequest;
-   private HttpRequest           sempListTopicsRequest;
+   private HttpRequest                    sempListQueuesRequest;
+   private HttpRequest                    sempListJndiTopicsRequest;
 
-   private String                authHeader;
+   private String                         authHeader;
+
+   private Map<String, SempJndiTopicData> mapJndiTopicData      = new HashMap<>();                                               // topicName,
+                                                                                                                                 // SempJndiTopicData
 
    // -------------------------
    // Constructor
@@ -60,8 +67,8 @@ public final class SEMPContext {
       this.sempListQueuesRequest = HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_QUEUES_LIST, mgmtUrl, vpn))).GET()
                .timeout(HTTP_TIMEOUT).header("Content-Type", "application/json").header("Authorization", authHeader).build();
 
-      this.sempListTopicsRequest = HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_TOPICS_LIST, mgmtUrl, vpn))).GET()
-               .timeout(HTTP_TIMEOUT).header("Content-Type", "application/json").header("Authorization", authHeader).build();
+      this.sempListJndiTopicsRequest = HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_JNDI_TOPICS_LIST, mgmtUrl, vpn)))
+               .GET().timeout(HTTP_TIMEOUT).header("Content-Type", "application/json").header("Authorization", authHeader).build();
 
    }
 
@@ -75,21 +82,30 @@ public final class SEMPContext {
    }
 
    public HttpRequest buildTopicInfoRequest(String topicName) {
-      return HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_TOPIC_INFO, mgmtUrl, vpn, topicName))).GET()
-               .timeout(Duration.ofMinutes(1)).header("Content-Type", "application/json").header("Authorization", authHeader)
+      SempJndiTopicData sempJndiTopicData = mapJndiTopicData.get(topicName);
+      return HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_TOPIC_INFO, mgmtUrl, vpn, sempJndiTopicData.physicalName)))
+               .GET().timeout(Duration.ofMinutes(1)).header("Content-Type", "application/json").header("Authorization", authHeader)
                .build();
+   }
+
+   public void putJndiTopicData(SempJndiTopicData sempJndiTopicData) {
+      mapJndiTopicData.put(sempJndiTopicData.topicName, sempJndiTopicData);
+   }
+
+   public SempJndiTopicData getJndiTopicData(String topicName) {
+      return mapJndiTopicData.get(topicName);
    }
 
    // ------------------------
    // Standard Getters/Setters
    // ------------------------
 
-   public HttpRequest getSempListTopicsRequest() {
-      return sempListTopicsRequest;
-   }
-
    public HttpRequest getSempListQueuesRequest() {
       return sempListQueuesRequest;
+   }
+
+   public HttpRequest getSempListJndiTopicsRequest() {
+      return sempListJndiTopicsRequest;
    }
 
 }
