@@ -16,23 +16,23 @@
  */
 package org.titou10.jtb.qm.solace.semp;
 
-import java.util.List;
-
 /**
  * 
- * SEMP response when querying for queues list
+ * SEMP response
  * 
  * @author Denis Forveille
  *
  */
-public class SempQueueResponse {
+public class SempResponse<T> {
 
-   public List<SempQueueData> data;
+   public T data;
+   // public Object meta;
+   // public Object links;
 
    // -------------------------
    // Constructor
    // -------------------------
-   public SempQueueResponse() {
+   public SempResponse() {
       // JSON-B
    }
 

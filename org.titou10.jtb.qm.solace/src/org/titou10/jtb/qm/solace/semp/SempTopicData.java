@@ -25,6 +25,7 @@ package org.titou10.jtb.qm.solace.semp;
  */
 public class SempTopicData {
 
+   public String  accessType;
    public Boolean consumerAckPropagationEnabled;
    public String  deadMsgQueue;
    public Boolean egressEnabled;
@@ -35,6 +36,7 @@ public class SempTopicData {
    public Long    maxRedeliveryCount;
    public Long    maxSpoolUsage;
    public Long    maxTtl;
+   public String  permission;
    public Boolean rejectLowPriorityMsgEnabled;
    public Long    rejectLowPriorityMsgLimit;
    public Boolean respectMsgPriorityEnabled;

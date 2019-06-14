@@ -25,6 +25,7 @@ package org.titou10.jtb.qm.solace.semp;
  */
 public class SempQueueData {
 
+   public String  accessType;
    public Boolean consumerAckPropagationEnabled;
    public String  deadMsgQueue;
    public Boolean egressEnabled;
@@ -35,9 +36,13 @@ public class SempQueueData {
    public Long    maxMsgSpoolUsage;
    public Long    maxRedeliveryCount;
    public Long    maxTtl;
+   public String  permission;
    public String  queueName;
    public Boolean rejectLowPriorityMsgEnabled;
    public Long    rejectLowPriorityMsgLimit;
+   public String  rejectMsgToSenderOnDiscardBehavior;
+   public Boolean respectMsgPriorityEnabled;
+   public Boolean respectTtlEnabled;
 
    // -------------------------
    // Constructor
