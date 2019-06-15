@@ -46,6 +46,7 @@ import org.titou10.jtb.jms.qm.TopicData;
 import org.titou10.jtb.qm.solace.semp.SempJndiTopicData;
 import org.titou10.jtb.qm.solace.semp.SempQueueData;
 import org.titou10.jtb.qm.solace.semp.SempResponse;
+import org.titou10.jtb.qm.solace.semp.SempResponseMetaError;
 import org.titou10.jtb.qm.solace.semp.SempTopicEndpointData;
 import org.titou10.jtb.qm.solace.utils.PType;
 
@@ -332,7 +333,7 @@ public class SolaceQManager extends QManager {
       log.debug("statusCode={}", response.statusCode());
       log.trace("body={}", response.body());
       if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-         String msg = "Bad return code received from Solace SEMP when retrieving Queue List: " + response.statusCode();
+         String msg = formatSempError("Error received from Solace server when retrieving Queue List", response.statusCode(), body);
          log.error(msg);
          throw new Exception(msg);
       }
@@ -353,7 +354,9 @@ public class SolaceQManager extends QManager {
       log.debug("statusCode={}", response.statusCode());
       log.trace("body={}", response.body());
       if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-         String msg = "Bad return code received from Solace SEMP when retrieving JNDITopic List: " + response.statusCode();
+         String msg = formatSempError("Error received from Solace server when retrieving JNDITopic List",
+                                      response.statusCode(),
+                                      body);
          log.error(msg);
          throw new Exception(msg);
       }
@@ -384,9 +387,10 @@ public class SolaceQManager extends QManager {
          log.debug("statusCode={}", response.statusCode());
          log.trace("body={}", response.body());
          if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-            log.error("Bad return code received from Solace SEMP when retrieving Queue information for '{}' : {}",
-                      queueName,
-                      response.statusCode());
+            String msg = formatSempError("Error received from Solace server when retrieving Queue information for '{}'",
+                                         response.statusCode(),
+                                         body);
+            log.error(msg, queueName);
             return properties;
          }
 
@@ -437,9 +441,11 @@ public class SolaceQManager extends QManager {
          log.debug("statusCode={}", response.statusCode());
          log.trace("body={}", response.body());
          if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-            log.error("Bad return code received from Solace SEMP when retrieving Topic information for '{}' : {}",
-                      topicName,
-                      response.statusCode());
+            String msg = formatSempError("Error received from Solace SEMP when retrieving Topic information for '{}'",
+                                         response.statusCode(),
+                                         body);
+            log.error(msg, topicName);
+
             return properties;
          }
 
@@ -473,6 +479,28 @@ public class SolaceQManager extends QManager {
    // -------
    // Helpers
    // -------
+
+   private String formatSempError(String message, int httpStatusCode, String body) {
+
+      SempResponse<SempQueueData> resp = JSONB.fromJson(body, JSONB_Q_DATA_RESP); // Whatever struct
+
+      SempResponseMetaError sempResponseMetaError = null;
+      if (resp.meta != null) {
+         sempResponseMetaError = resp.meta.error;
+      }
+
+      StringBuilder sb = new StringBuilder(256);
+      sb.append(message).append(CR);
+      sb.append("Details of the error encountered:").append(CR);
+      sb.append("HTTP Status Code: " + httpStatusCode).append(CR);
+      if (sempResponseMetaError != null) {
+         sb.append("SEMP Error Code: " + sempResponseMetaError.code).append(CR);
+         sb.append("SEMP Error Status: " + sempResponseMetaError.status).append(CR);
+         sb.append("SEMP Error Descriptions: " + sempResponseMetaError.description).append(CR);
+      }
+
+      return sb.toString();
+   }
 
    @Override
    public String getHelpText() {

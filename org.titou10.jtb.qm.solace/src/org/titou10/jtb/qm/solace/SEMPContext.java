@@ -37,9 +37,11 @@ public final class SEMPContext {
    private static final Duration          HTTP_TIMEOUT          = Duration.ofSeconds(30L);
 
    private static final String            SEMP_CONFIG_URI       = "/SEMP/v2/config/msgVpns/%s";
+   private static final String            SEMP_COUNT_PARAM      = "count=1000";
 
-   private static final String            SEMP_QUEUES_LIST      = "%s" + SEMP_CONFIG_URI + "/queues?select=queueName&count=1000";
-   private static final String            SEMP_JNDI_TOPICS_LIST = "%s" + SEMP_CONFIG_URI + "/jndiTopics?count=1000";
+   private static final String            SEMP_QUEUES_LIST      = "%s" + SEMP_CONFIG_URI + "/queues?select=queueName&"
+                                                                  + SEMP_COUNT_PARAM;
+   private static final String            SEMP_JNDI_TOPICS_LIST = "%s" + SEMP_CONFIG_URI + "/jndiTopics?" + SEMP_COUNT_PARAM;
 
    private static final String            SEMP_QUEUE_INFO       = "%s" + SEMP_CONFIG_URI + "/queues/%s";
    private static final String            SEMP_TOPIC_INFO       = "%s" + SEMP_CONFIG_URI + "/topicEndpoints/%s";
@@ -52,8 +54,8 @@ public final class SEMPContext {
 
    private String                         authHeader;
 
-   private Map<String, SempJndiTopicData> mapJndiTopicData      = new HashMap<>();                                               // topicName,
-                                                                                                                                 // SempJndiTopicData
+   private Map<String, SempJndiTopicData> mapJndiTopicData      = new HashMap<>();                                           // topicName,
+                                                                                                                             // SempJndiTopicData
 
    // -------------------------
    // Constructor

@@ -18,21 +18,21 @@ package org.titou10.jtb.qm.solace.semp;
 
 /**
  * 
- * SEMP response
+ * SEMP response > meta > error structure
  * 
  * @author Denis Forveille
  *
  */
-public class SempResponse<T> {
+public class SempResponseMetaError {
 
-   public T                data;
-   public SempResponseMeta meta;
-   // public Object links;
+   public Integer code;
+   public String  description;
+   public String  status;
 
    // -------------------------
    // Constructor
    // -------------------------
-   public SempResponse() {
+   public SempResponseMetaError() {
       // JSON-B
    }
 
