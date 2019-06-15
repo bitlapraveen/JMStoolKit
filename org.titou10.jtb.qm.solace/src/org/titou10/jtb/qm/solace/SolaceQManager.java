@@ -61,37 +61,54 @@ import com.solacesystems.jms.SolJmsUtility;
  */
 public class SolaceQManager extends QManager {
 
-   private static final org.slf4j.Logger   log                         = LoggerFactory.getLogger(SolaceQManager.class);
+   private static final org.slf4j.Logger   log                           = LoggerFactory.getLogger(SolaceQManager.class);
 
-   private static final String             CR                          = "\n";
+   private static final String             CR                            = "\n";
    private static final String             HELP_TEXT;
 
    // HTTP REST stuff
-   private static final HttpClient         HTTP_CLIENT                 = HttpClient.newBuilder()
+   private static final HttpClient         HTTP_CLIENT                   = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL).build();
 
    // JSON-B stuff
-   private static final Jsonb              JSONB                       = JsonbBuilder.create();
-   private static final PType              JSONB_Q_DATA_RESP           = new PType(SempResponse.class, SempQueueData.class);
-   private static final PType              JSONB_Q_DATA_LIST           = new PType(List.class, SempQueueData.class);
-   private static final PType              JSONB_Q_DATA_LIST_RESP      = new PType(SempResponse.class, JSONB_Q_DATA_LIST);
+   private static final Jsonb              JSONB                         = JsonbBuilder.create();
+   private static final PType              JSONB_Q_DATA_RESP             = new PType(SempResponse.class, SempQueueData.class);
+   private static final PType              JSONB_Q_DATA_LIST             = new PType(List.class, SempQueueData.class);
+   private static final PType              JSONB_Q_DATA_LIST_RESP        = new PType(SempResponse.class, JSONB_Q_DATA_LIST);
 
-   private static final PType              JSONB_TEP_DATA_RESP         = new PType(SempResponse.class, SempTopicEndpointData.class);
+   private static final PType              JSONB_TEP_DATA_RESP           = new PType(SempResponse.class,
+                                                                                     SempTopicEndpointData.class);
 
-   private static final PType              JSONB_JNDI_T_DATA_LIST      = new PType(List.class, SempJndiTopicData.class);
-   private static final PType              JSONB_JNDI_T_DATA_LIST_RESP = new PType(SempResponse.class, JSONB_JNDI_T_DATA_LIST);
+   private static final PType              JSONB_JNDI_T_DATA_LIST        = new PType(List.class, SempJndiTopicData.class);
+   private static final PType              JSONB_JNDI_T_DATA_LIST_RESP   = new PType(SempResponse.class, JSONB_JNDI_T_DATA_LIST);
 
    // Properties
-   private List<QManagerProperty>          parameters                  = new ArrayList<QManagerProperty>();
+   private List<QManagerProperty>          parameters                    = new ArrayList<QManagerProperty>();
 
-   private static final String             MESSAGE_VPN                 = "VPN";
-   private static final String             MGMT_URL                    = "mgmt_url";
-   private static final String             MGMT_USERNAME               = "mgmt_username";
-   private static final String             MGMT_PASSWORD               = "mgmt_password";
-   private static final String             BROWSER_TIMEOUT             = "browser_timeout";
+   private static final String             MESSAGE_VPN                   = "VPN";
+   private static final String             MGMT_URL                      = "mgmt_url";
+   private static final String             MGMT_USERNAME                 = "mgmt_username";
+   private static final String             MGMT_PASSWORD                 = "mgmt_password";
+   private static final String             BROWSER_TIMEOUT               = "browser_timeout";
+
+   private static final String             SSL_CIPHER_SUITE              = "ssl_cipher_suite";
+   private static final String             SSL_CONNECTION_DOWNGRADE_TO   = "ssl_connection_downgrade_to";
+   private static final String             SSL_EXCLUDED_PROTOCOLS        = "ssl_excluded_protocols";
+   private static final String             SSL_KEY_STORE                 = "ssl_key_store";
+   private static final String             SSL_KEY_STORE_FORMAT          = "ssl_key_store_format";
+   private static final String             SSL_KEY_STORE_PASSWORD        = "ssl_key_store_password";
+   private static final String             SSL_PRIVATE_KEY_ALIAS         = "ssl_private_key_alias";
+   private static final String             SSL_PRIVATE_KEY_PASSWORD      = "ssl_private_key_password";
+   private static final String             SSL_PROTOCOL                  = "ssl_protocol";
+   private static final String             SSL_TRUST_STORE               = "ssl_trust_store";
+   private static final String             SSL_TRUST_STORE_FORMAT        = "ssl_trust_store_format";
+   private static final String             SSL_TRUST_STORE_PASSWORD      = "ssl_trust_store_password";
+   private static final String             SSL_TRUSTED_COMMON_NAME_LIST  = "ssl_trusted_common_name_list";
+   private static final String             SSL_VALIDATE_CERTIFICATE      = "ssl_validate_certificate";
+   private static final String             SSL_VALIDATE_CERTIFICATE_DATE = "ssl_validate_certificate_date";
 
    // Operations
-   private final Map<Integer, SEMPContext> sempContexts                = new HashMap<>();
+   private final Map<Integer, SEMPContext> sempContexts                  = new HashMap<>();
 
    public SolaceQManager() {
       log.debug("Instantiate Solace");
@@ -101,10 +118,9 @@ public class SolaceQManager extends QManager {
                                           true,
                                           JMSPropertyKind.STRING,
                                           false,
-                                          "MGMT url (eg 'http://localhost:8080','https://localhost:8943)",
-                                          ""));
-      parameters.add(new QManagerProperty(MGMT_USERNAME, true, JMSPropertyKind.STRING, false, "SEMP user name", ""));
-      parameters.add(new QManagerProperty(MGMT_PASSWORD, true, JMSPropertyKind.STRING, true, "SEMP user password", ""));
+                                          "Management url (eg 'http://localhost:8080','https://localhost:8943)"));
+      parameters.add(new QManagerProperty(MGMT_USERNAME, true, JMSPropertyKind.STRING, false, "Management user name"));
+      parameters.add(new QManagerProperty(MGMT_PASSWORD, true, JMSPropertyKind.STRING, true, "Management user password"));
       parameters
                .add(new QManagerProperty(BROWSER_TIMEOUT,
                                          true,
@@ -115,6 +131,72 @@ public class SolaceQManager extends QManager {
                                                 + "Enumeration.hasMoreElements() returns immediately.",
                                          "250"));
 
+      parameters.add(new QManagerProperty(SSL_CIPHER_SUITE,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "The TLS/ SSL cipher suites to use to negotiate a secure connection"));
+      parameters
+               .add(new QManagerProperty(SSL_CONNECTION_DOWNGRADE_TO,
+                                         false,
+                                         JMSPropertyKind.STRING,
+                                         false,
+                                         "Transport protocol that TLS/SSL connections will be downgraded to after client authentication (eg 'PLAIN_TEXT')"));
+      parameters.add(new QManagerProperty(SSL_EXCLUDED_PROTOCOLS,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Protocols that should not be used"));
+      parameters.add(new QManagerProperty(SSL_KEY_STORE,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Key store for client client certificate authentication"));
+      parameters.add(new QManagerProperty(SSL_KEY_STORE_FORMAT,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Key store format ('jks' or 'pkcs12')"));
+      parameters.add(new QManagerProperty(SSL_KEY_STORE_PASSWORD, false, JMSPropertyKind.STRING, true));
+      parameters.add(new QManagerProperty(SSL_PRIVATE_KEY_ALIAS,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Key alias for client client certificate authentication"));
+      parameters.add(new QManagerProperty(SSL_PRIVATE_KEY_PASSWORD, false, JMSPropertyKind.STRING, true));
+      parameters.add(new QManagerProperty(SSL_PROTOCOL,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Comma-separated list of the encryption protocolsl ('sslv3,tlsv1,tlsv1.1,tlsv1.2')"));
+      parameters.add(new QManagerProperty(SSL_TRUST_STORE,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Mandatory if the SSL Certificate Validation property is set to true"));
+      parameters.add(new QManagerProperty(SSL_TRUST_STORE_FORMAT,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "Trust store format ('jks' or 'pkcs12')"));
+      parameters.add(new QManagerProperty(SSL_TRUST_STORE_PASSWORD, false, JMSPropertyKind.STRING, true));
+      parameters.add(new QManagerProperty(SSL_TRUSTED_COMMON_NAME_LIST,
+                                          false,
+                                          JMSPropertyKind.STRING,
+                                          false,
+                                          "A list of up to 16 acceptable common names for matching in server certificates"));
+      parameters
+               .add(new QManagerProperty(SSL_VALIDATE_CERTIFICATE,
+                                         false,
+                                         JMSPropertyKind.BOOLEAN,
+                                         false,
+                                         "Indicates whether the API should validate server certificates with the trusted certificates in the trust store"));
+      parameters
+               .add(new QManagerProperty(SSL_VALIDATE_CERTIFICATE_DATE,
+                                         false,
+                                         JMSPropertyKind.BOOLEAN,
+                                         false,
+                                         "Indicates whether the Session connection should fail when an expired certificate or a certificate not yet in use is received"));
    }
 
    @Override
@@ -129,6 +211,22 @@ public class SolaceQManager extends QManager {
       String mgmtUsername = mapProperties.get(MGMT_USERNAME);
       String mgmtPassword = mapProperties.get(MGMT_PASSWORD);
       int browserTimeout = Integer.parseInt(mapProperties.get(BROWSER_TIMEOUT));
+      String sslCipherSuite = mapProperties.get(SSL_CIPHER_SUITE);
+      String sslConnectionDowngradeTo = mapProperties.get(SSL_CONNECTION_DOWNGRADE_TO);
+      String sslExcludedProtocols = mapProperties.get(SSL_EXCLUDED_PROTOCOLS);
+      String sslKeyStore = mapProperties.get(SSL_KEY_STORE);
+      String sslKeyStoreFormat = mapProperties.get(SSL_KEY_STORE_FORMAT);
+      String sslKeyStorePassword = mapProperties.get(SSL_KEY_STORE_PASSWORD);
+      String sslPrivateKeyAlias = mapProperties.get(SSL_PRIVATE_KEY_ALIAS);
+      String sslPrivateKeyPassword = mapProperties.get(SSL_PRIVATE_KEY_PASSWORD);
+      String sslProtocol = mapProperties.get(SSL_PROTOCOL);
+      String sslTrustStore = mapProperties.get(SSL_TRUST_STORE);
+      String sslTrustStoreFormat = mapProperties.get(SSL_TRUST_STORE_FORMAT);
+      String sslTrustStorePassword = mapProperties.get(SSL_TRUST_STORE_PASSWORD);
+      String sslTrustedCommonNameList = mapProperties.get(SSL_TRUSTED_COMMON_NAME_LIST);
+      String sslValidateCertificate = mapProperties.get(SSL_VALIDATE_CERTIFICATE);
+      String sslValidateCertificateDate = mapProperties.get(SSL_VALIDATE_CERTIFICATE_DATE);
+
       if (browserTimeout < 250) {
          throw new Exception("Browser timeout must be an integer greater than or equal to 250.");
       }
@@ -136,13 +234,61 @@ public class SolaceQManager extends QManager {
       // JMS Connections
 
       SolConnectionFactory cf = SolJmsUtility.createConnectionFactory();
+      cf.setDirectTransport(false);
+
       cf.setHost(sessionDef.getHost());
       cf.setPort(sessionDef.getPort());
+
       cf.setVPN(vpn);
       cf.setUsername(sessionDef.getActiveUserid());
       cf.setPassword(sessionDef.getActivePassword());
-      cf.setDirectTransport(false);
       cf.setBrowserTimeoutInMS(browserTimeout);
+
+      if (sslCipherSuite != null) {
+         cf.setSSLCipherSuites(sslCipherSuite);
+      }
+      if (sslConnectionDowngradeTo != null) {
+         cf.setSSLConnectionDowngradeTo(sslConnectionDowngradeTo);
+      }
+      if (sslExcludedProtocols != null) {
+         cf.setSSLExcludedProtocols(sslExcludedProtocols);
+      }
+      if (sslKeyStore != null) {
+         cf.setSSLKeyStore(sslKeyStore);
+      }
+      if (sslKeyStoreFormat != null) {
+         cf.setSSLKeyStoreFormat(sslKeyStoreFormat);
+      }
+      if (sslKeyStorePassword != null) {
+         cf.setSSLKeyStorePassword(sslKeyStorePassword);
+      }
+      if (sslPrivateKeyAlias != null) {
+         cf.setSSLPrivateKeyAlias(sslPrivateKeyAlias);
+      }
+      if (sslPrivateKeyPassword != null) {
+         cf.setSSLPrivateKeyPassword(sslPrivateKeyPassword);
+      }
+      if (sslProtocol != null) {
+         cf.setSSLProtocol(sslProtocol);
+      }
+      if (sslTrustStore != null) {
+         cf.setSSLTrustStore(sslTrustStore);
+      }
+      if (sslTrustStoreFormat != null) {
+         cf.setSSLTrustStoreFormat(sslTrustStoreFormat);
+      }
+      if (sslTrustStorePassword != null) {
+         cf.setSSLTrustStorePassword(sslTrustStorePassword);
+      }
+      if (sslTrustedCommonNameList != null) {
+         cf.setSSLTrustedCommonNameList(sslTrustedCommonNameList);
+      }
+      if (sslValidateCertificate != null) {
+         cf.setSSLValidateCertificate(Boolean.parseBoolean(sslValidateCertificate));
+      }
+      if (sslValidateCertificateDate != null) {
+         cf.setSSLValidateCertificateDate(Boolean.parseBoolean(sslValidateCertificateDate));
+      }
 
       Connection jmsConnection = cf.createConnection();
       jmsConnection.setClientID(clientID);
@@ -335,36 +481,61 @@ public class SolaceQManager extends QManager {
 
    static {
       StringBuilder sb = new StringBuilder(2048);
-      sb.append("Extra JARS :").append(CR);
-      sb.append("------------").append(CR);
+      sb.append("Extra JARS:").append(CR);
+      sb.append("-----------").append(CR);
       sb.append("No extra jar is needed as JMSToolBox is bundled with the latest Solace client jars").append(CR);
       sb.append(CR);
-      sb.append("Information").append(CR);
+      sb.append("Information:").append(CR);
       sb.append("------------").append(CR);
-      sb.append("Internally, JMSToolBox uses the SEMP feature of Solace to interacy with the SOlace server").append(CR);
+      sb.append("Internally, JMSToolBox uses the Managment interface (SEMP) of Solace to interact with the Solace server")
+               .append(CR);
       sb.append("For more information: https://docs.solace.com/SEMP/Using-SEMP.htm").append(CR);
+      sb.append("For information on the SSL configuration: https://docs.solace.com/Configuring-and-Managing/TLS-SSL-Service-Connections.htm")
+               .append(CR);
       sb.append(CR);
       sb.append("Connection:").append(CR);
       sb.append("-----------").append(CR);
       sb.append("Host          : Solace server host name (eg localhost)").append(CR);
-      sb.append("Port          : Solace server port (eg. 55555)").append(CR);
+      sb.append("Port          : Solace server message port (eg. 55555)").append(CR);
       sb.append("User/Password : User allowed to connect to get a JMS Connection ");
       sb.append(CR);
       sb.append(CR);
       sb.append("Properties:").append(CR);
       sb.append("-----------").append(CR);
-      sb.append("- VPN             : Name of the VPN (eg 'default'").append(CR);
-      sb.append(CR);
-      sb.append("- mgmt_url        : URL (scheme+host+port) of the SEMP management interface (eg http://localhost:8080").append(CR);
-      sb.append("- mgmt_username   : SEMP user name").append(CR);
-      sb.append("- mgmt_password   : SEMP user password").append(CR);
-      sb.append(CR);
+      sb.append("- VPN             : Name of the VPN (eg 'default')").append(CR);
       sb.append("- browser_timeout : The maximum time in ms for a QueueBrowser to wait for a message to arrive in the Browser’s local message buffer before returning.")
                .append(CR);
-      sb.append("                     If there is already a message waiting, Enumeration.hasMoreElements() returns immediately.")
+      sb.append("                    If there is already a message waiting, Enumeration.hasMoreElements() returns immediately.")
                .append(CR);
-      sb.append("                     Minimum value: 250").append(CR);
+      sb.append("                    Minimum value: 250").append(CR);
       sb.append(CR);
+      sb.append("- mgmt_url      : Managment URL (scheme+host+port) of the SEMP managment interface (eg http://localhost:8080")
+               .append(CR);
+      sb.append("- mgmt_username : Managment user name").append(CR);
+      sb.append("- mgmt_password : Managment user password").append(CR);
+      sb.append(CR);
+
+      sb.append("- ssl_cipher_suite              : The TLS/ SSL cipher suites to use to negotiate a secure connection").append(CR);
+      sb.append("- ssl_connection_downgrade_to   : Transport protocol that TLS/SSL connections will be downgraded to after client authentication (eg 'PLAIN_TEXT')")
+               .append(CR);
+      sb.append("- ssl_excluded_protocols        : Protocols that should not be used").append(CR);
+      sb.append("- ssl_key_store                 : Key store for client client certificate authentication").append(CR);
+      sb.append("- ssl_key_store_format          : Key store format ('jks' or 'pkcs12')").append(CR);
+      sb.append("- ssl_key_store_password        : Key store password").append(CR);
+      sb.append("- ssl_private_key_alias         : Key alias for client client certificate authentication").append(CR);
+      sb.append("- ssl_private_key_password      : Key password").append(CR);
+      sb.append("- ssl_protocol                  : Comma-separated list of the encryption protocolsl ('sslv3,tlsv1,tlsv1.1,tlsv1.2')")
+               .append(CR);
+      sb.append("- ssl_trust_store               : Trust store. Mandatory if the SSL Certificate Validation property is set to true")
+               .append(CR);
+      sb.append("- ssl_trust_store_format        : Trust store format ('jks' or 'pkcs12')").append(CR);
+      sb.append("- ssl_trust_store_password      : Trust store password").append(CR);
+      sb.append("- ssl_trusted_common_name_list  : A list of up to 16 acceptable common names for matching in server certificates")
+               .append(CR);
+      sb.append("- ssl_validate_certificate      : Indicates whether the API should validate server certificates with the trusted certificates in the trust store")
+               .append(CR);
+      sb.append("- ssl_validate_certificate_date : Indicates whether the Session connection should fail when an expired certificate or a certificate not yet in use is received")
+               .append(CR);
 
       HELP_TEXT = sb.toString();
    }
