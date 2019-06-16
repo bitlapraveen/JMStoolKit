@@ -58,6 +58,7 @@ import com.solacesystems.jms.SolJmsUtility;
  * Implements Solace Q Provider
  * 
  * @author Denis Forveille
+ * @author Monica Zhang (Monica.Zhang@solace.com)
  *
  */
 public class SolaceQManager extends QManager {
@@ -152,12 +153,12 @@ public class SolaceQManager extends QManager {
                                           false,
                                           JMSPropertyKind.STRING,
                                           false,
-                                          "Key store for client client certificate authentication"));
+                                          "Client side certificate key store ((eg D:/somewhere/key.jks)"));
       parameters.add(new QManagerProperty(SSL_KEY_STORE_FORMAT,
                                           false,
                                           JMSPropertyKind.STRING,
                                           false,
-                                          "Key store format ('jks' or 'pkcs12')"));
+                                          "Client side certificate key store format ('jks' or 'pkcs12')"));
       parameters.add(new QManagerProperty(SSL_KEY_STORE_PASSWORD, false, JMSPropertyKind.STRING, true));
       parameters.add(new QManagerProperty(SSL_PRIVATE_KEY_ALIAS,
                                           false,
@@ -174,7 +175,7 @@ public class SolaceQManager extends QManager {
                                           false,
                                           JMSPropertyKind.STRING,
                                           false,
-                                          "Mandatory if the SSL Certificate Validation property is set to true"));
+                                          "Trust store (eg D:/somewhere/trust.jks)"));
       parameters.add(new QManagerProperty(SSL_TRUST_STORE_FORMAT,
                                           false,
                                           JMSPropertyKind.STRING,
@@ -537,7 +538,7 @@ public class SolaceQManager extends QManager {
                .append(CR);
       sb.append("                    Minimum value: 250").append(CR);
       sb.append(CR);
-      sb.append("- mgmt_url      : Managment URL (scheme+host+port) of the SEMP managment interface (eg http://localhost:8080")
+      sb.append("- mgmt_url      : Managment URL (scheme+host+port) of the SEMP managment interface (eg 'http://localhost:8080'")
                .append(CR);
       sb.append("- mgmt_username : Managment user name").append(CR);
       sb.append("- mgmt_password : Managment user password").append(CR);
@@ -547,14 +548,14 @@ public class SolaceQManager extends QManager {
       sb.append("- ssl_connection_downgrade_to   : Transport protocol that TLS/SSL connections will be downgraded to after client authentication (eg 'PLAIN_TEXT')")
                .append(CR);
       sb.append("- ssl_excluded_protocols        : Protocols that should not be used").append(CR);
-      sb.append("- ssl_key_store                 : Key store for client client certificate authentication").append(CR);
-      sb.append("- ssl_key_store_format          : Key store format ('jks' or 'pkcs12')").append(CR);
-      sb.append("- ssl_key_store_password        : Key store password").append(CR);
+      sb.append("- ssl_key_store                 : Client side certificate key store ((eg D:/somewhere/key.jks)").append(CR);
+      sb.append("- ssl_key_store_format          : Client side certificate key store format ('jks' or 'pkcs12')").append(CR);
+      sb.append("- ssl_key_store_password        : Client side certificate key store password").append(CR);
       sb.append("- ssl_private_key_alias         : Key alias for client client certificate authentication").append(CR);
       sb.append("- ssl_private_key_password      : Key password").append(CR);
       sb.append("- ssl_protocol                  : Comma-separated list of the encryption protocolsl ('sslv3,tlsv1,tlsv1.1,tlsv1.2')")
                .append(CR);
-      sb.append("- ssl_trust_store               : Trust store. Mandatory if the SSL Certificate Validation property is set to true")
+      sb.append("- ssl_trust_store               : Trust store (eg D:/somewhere/trust.jks). Mandatory if the SSL Certificate Validation property is set to true")
                .append(CR);
       sb.append("- ssl_trust_store_format        : Trust store format ('jks' or 'pkcs12')").append(CR);
       sb.append("- ssl_trust_store_password      : Trust store password").append(CR);
