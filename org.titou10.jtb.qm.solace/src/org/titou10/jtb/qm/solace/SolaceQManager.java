@@ -364,9 +364,9 @@ public class SolaceQManager extends QManager {
 
       SempResponse<List<SempJndiTopicData>> topics = JSONB.fromJson(body, JSONB_JNDI_T_DATA_LIST_RESP);
       for (SempJndiTopicData sempJndiTopicData : topics.data) {
-         log.debug("t={}", sempJndiTopicData.topicName);
+         log.debug("t={}", sempJndiTopicData.physicalName);
          sempContext.putJndiTopicData(sempJndiTopicData);
-         listTopicData.add(new TopicData(sempJndiTopicData.topicName));
+         listTopicData.add(new TopicData(sempJndiTopicData.physicalName));
       }
 
       return new DestinationData(listQueueData, listTopicData);
@@ -431,7 +431,7 @@ public class SolaceQManager extends QManager {
       TreeMap<String, Object> properties = new TreeMap<>();
       try {
 
-         properties.put("physicalName", sempContext.getJndiTopicData(topicName).physicalName);
+         properties.put("topicName", sempContext.getJndiTopicData(topicName).topicName);
 
          // TODO: DF maybe could be optimized to not call again if the endPoint does not exists?
 

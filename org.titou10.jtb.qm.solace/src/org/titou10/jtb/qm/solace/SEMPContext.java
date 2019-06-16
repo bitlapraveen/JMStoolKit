@@ -91,7 +91,7 @@ public final class SEMPContext {
    }
 
    public void putJndiTopicData(SempJndiTopicData sempJndiTopicData) {
-      mapJndiTopicData.put(sempJndiTopicData.topicName, sempJndiTopicData);
+      mapJndiTopicData.put(sempJndiTopicData.physicalName, sempJndiTopicData);
    }
 
    public SempJndiTopicData getJndiTopicData(String topicName) {
