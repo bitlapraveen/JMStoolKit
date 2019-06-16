@@ -44,7 +44,6 @@ public final class SEMPContext {
    private static final String            SEMP_JNDI_TOPICS_LIST = "%s" + SEMP_CONFIG_URI + "/jndiTopics?" + SEMP_COUNT_PARAM;
 
    private static final String            SEMP_QUEUE_INFO       = "%s" + SEMP_CONFIG_URI + "/queues/%s";
-   private static final String            SEMP_TOPIC_INFO       = "%s" + SEMP_CONFIG_URI + "/topicEndpoints/%s";
 
    private String                         vpn;
    private String                         mgmtUrl;
@@ -80,13 +79,6 @@ public final class SEMPContext {
    public HttpRequest buildQueueInfoRequest(String queueName) {
       return HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_QUEUE_INFO, mgmtUrl, vpn, queueName))).GET()
                .timeout(Duration.ofMinutes(1)).header("Content-Type", "application/json").header("Authorization", authHeader)
-               .build();
-   }
-
-   public HttpRequest buildTopicInfoRequest(String topicName) {
-      SempJndiTopicData sempJndiTopicData = mapJndiTopicData.get(topicName);
-      return HttpRequest.newBuilder().uri(URI.create(String.format(SEMP_TOPIC_INFO, mgmtUrl, vpn, sempJndiTopicData.physicalName)))
-               .GET().timeout(Duration.ofMinutes(1)).header("Content-Type", "application/json").header("Authorization", authHeader)
                .build();
    }
 

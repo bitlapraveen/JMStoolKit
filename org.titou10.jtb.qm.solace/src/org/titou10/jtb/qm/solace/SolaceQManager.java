@@ -47,7 +47,6 @@ import org.titou10.jtb.qm.solace.semp.SempJndiTopicData;
 import org.titou10.jtb.qm.solace.semp.SempQueueData;
 import org.titou10.jtb.qm.solace.semp.SempResponse;
 import org.titou10.jtb.qm.solace.semp.SempResponseMetaError;
-import org.titou10.jtb.qm.solace.semp.SempTopicEndpointData;
 import org.titou10.jtb.qm.solace.utils.PType;
 
 import com.solacesystems.jms.SolConnectionFactory;
@@ -77,9 +76,6 @@ public class SolaceQManager extends QManager {
    private static final PType              JSONB_Q_DATA_RESP             = new PType(SempResponse.class, SempQueueData.class);
    private static final PType              JSONB_Q_DATA_LIST             = new PType(List.class, SempQueueData.class);
    private static final PType              JSONB_Q_DATA_LIST_RESP        = new PType(SempResponse.class, JSONB_Q_DATA_LIST);
-
-   private static final PType              JSONB_TEP_DATA_RESP           = new PType(SempResponse.class,
-                                                                                     SempTopicEndpointData.class);
 
    private static final PType              JSONB_JNDI_T_DATA_LIST        = new PType(List.class, SempJndiTopicData.class);
    private static final PType              JSONB_JNDI_T_DATA_LIST_RESP   = new PType(SempResponse.class, JSONB_JNDI_T_DATA_LIST);
@@ -429,50 +425,9 @@ public class SolaceQManager extends QManager {
       SEMPContext sempContext = sempContexts.get(hash);
 
       TreeMap<String, Object> properties = new TreeMap<>();
-      try {
 
-         properties.put("topicName", sempContext.getJndiTopicData(topicName).topicName);
-
-         // TODO: DF maybe could be optimized to not call again if the endPoint does not exists?
-
-         HttpRequest request = sempContext.buildTopicInfoRequest(topicName);
-         log.debug("SEMP request: {}", request);
-         HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
-         String body = response.body();
-         log.debug("statusCode={}", response.statusCode());
-         log.trace("body={}", response.body());
-         if (response.statusCode() != HttpURLConnection.HTTP_OK) {
-            String msg = formatSempError("Error received from Solace SEMP when retrieving Topic information for '{}'",
-                                         response.statusCode(),
-                                         body);
-            log.error(msg, topicName);
-
-            return properties;
-         }
-
-         SempResponse<SempTopicEndpointData> qResp = JSONB.fromJson(body, JSONB_TEP_DATA_RESP);
-         SempTopicEndpointData tepData = qResp.data;
-
-         properties.put("accessType", tepData.accessType);
-         properties.put("consumerAckPropagationEnabled", tepData.consumerAckPropagationEnabled);
-         properties.put("deadMsgQueue", tepData.deadMsgQueue);
-         properties.put("egressEnabled", tepData.egressEnabled);
-         properties.put("ingressEnabled", tepData.ingressEnabled);
-         properties.put("maxBindCount", tepData.maxBindCount);
-         properties.put("maxDeliveredUnackedMsgsPerFlow", tepData.maxDeliveredUnackedMsgsPerFlow);
-         properties.put("maxMsgSize", tepData.maxMsgSize);
-         properties.put("maxRedeliveryCount", tepData.maxRedeliveryCount);
-         properties.put("maxSpoolUsage", tepData.maxSpoolUsage);
-         properties.put("maxTtl", tepData.maxTtl);
-         properties.put("permission", tepData.permission);
-         properties.put("rejectLowPriorityMsgEnabled", tepData.rejectLowPriorityMsgEnabled);
-         properties.put("rejectLowPriorityMsgLimit", tepData.rejectLowPriorityMsgLimit);
-         properties.put("respectMsgPriorityEnabled", tepData.respectMsgPriorityEnabled);
-         properties.put("respectTtlEnabled", tepData.respectTtlEnabled);
-
-      } catch (Exception e) {
-         log.error("Exception occurred in getTopicInformation()", e);
-      }
+      properties.put("physicalName", sempContext.getJndiTopicData(topicName).physicalName);
+      properties.put("topicName", sempContext.getJndiTopicData(topicName).topicName);
 
       return properties;
    }
